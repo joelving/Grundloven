@@ -1,53 +1,48 @@
 import React from 'react';
-import { bindActionCreators } from 'redux';
+//import { bindActionCreators } from 'redux';
 import { connect } from 'react-redux';
 import { Formik, Form } from 'formik';
 import { Link } from 'react-router-dom';
-import { isEmail, isNullOrWhitespace } from '../../helpers/validators';
+import { isEmail } from '../../helpers/validators';
 import ProblemDetails from '../../components/problem-details';
-import {
-    login
-} from '../../store/reducers/account';
+// import {
+//     forgotPassword
+// } from '../../store/reducers/account';
 
 const validator = (values, errorMessages) => {
     let errors = {};
 
     if (!isEmail(values.email))
         errors.email = errorMessages.email || "Du skal indtaste en emailadresse.";
-
-    if (isNullOrWhitespace(values.password))
-        errors.password = errorMessages.password || "Du skal indtaste et kodeord.";
         
     return errors;
 };
 
-class Login extends React.Component {
+class ForgotPassword extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
             problemDetails: null,
-            isLoading: false
+            isLoading: false,
+            showReceipt: false
         };
     }
 
-    login = async (username, password) => {
+    forgotPassword = async email => {
         try {
-            let response = await post('/api/account/login', { grant_type: "password", username, password }, false);
-            dispatch({ type: LOGIN_SUCCEEDED, ...response });
-            this.props.goToFrontPage();
+            await post('/api/account/forgot-password', { email });
+            this.setState(state => state.showReceipt = true);
         }
         catch (problemDetails) {
             this.setState(state => state.problemDetails = problemDetails);
         }
     }
-    
-    render() {
-        const { isLoading, problemDetails } = this.state;
-        const { loggedIn } = this.props;
 
+    render() {
+        const { isLoading, problemDetails, showReceipt } = this.state;
         const renderer = ({ touched, errors, values, handleChange, handleBlur }) => (
             <Form>
-                <h1>Login</h1>
+                <h1>Glemt kodeord</h1>
 
                 <ProblemDetails {...problemDetails} />
 
@@ -67,25 +62,10 @@ class Login extends React.Component {
                     {touched.email && errors.email && <div className="invalid-feedback">{errors.email}</div>}
                 </div>
                 
-                <div className="form-group">
-                    <label htmlFor="password-input" style={touched.password && errors.password ? { color: "red"} : {}}>Kodeord *</label>
-                    <input
-                        id="password-input"
-                        className="form-control"
-                        onChange={handleChange}
-                        onBlur={handleBlur}
-                        value={values.password}
-                        type="password"
-                        name="password"
-                        required
-                    />
-                    {touched.password && errors.password && <div className="invalid-feedback">{errors.password}</div>}
-                </div>
-                
-                <button className="btn btn-primary" type="submit" disabled={isLoading}>Login</button>
+                <button className="btn btn-primary" type="submit" disabled={isLoading}>Indsend</button>
 
                 <div className="text-center">
-                    <Link to="/forgot-password">Glemt kodeord?</Link>
+                    <Link to="/login">Log ind med eksisterende bruger</Link>
                 </div>
                 <div className="text-center">
                     <Link to="/register">Opret en ny konto</Link>
@@ -94,30 +74,33 @@ class Login extends React.Component {
         );
         return <div className="row">
             <div className="col-12 col-sm-6 offset-sm-3">
-                <Formik initialValues={{ email: "", password: "" }}
+                {showReceipt ?
+                <div>
+                    <h2>Forespørgsel indsendt</h2>
+                    <p>Vi har modtaget din anmodning om at få nulstillet dit kodeord. Du bør modtage en email med et link til at nulstille dit kodeord snarest.</p>
+                </div>
+                :
+                <Formik initialValues={{ email: "" }}
                     validate={validator}
-                    onSubmit={({ email, password }) => this.login(email, password)}
+                    onSubmit={({ email }) => this.forgotPassword(email)}
                     render={renderer}>
-                </Formik>
+                </Formik>}
             </div>
         </div>;
     }
 };
 
-const mapStateToProps = ({ account, profile }) => ({
+const mapStateToProps = ({ account }) => ({
     loggedIn: account.loggedIn,
-    profile: profile.profile
 });
 
-const mapDispatchToProps = dispatch =>
-    bindActionCreators(
-        {
-            goToFrontPage: () => push('/')
-        },
-        dispatch
-    );
+// const mapDispatchToProps = dispatch =>
+//     bindActionCreators(
+//         { forgotPassword },
+//         dispatch
+//     );
 
 export default connect(
     mapStateToProps,
-    mapDispatchToProps
-)(Login);
+    //mapDispatchToProps
+)(ForgotPassword);

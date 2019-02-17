@@ -95,8 +95,12 @@ namespace Grundloven.Controllers
         [Produces("application/json")]
         [ProducesResponseType(200)]
         [ProducesResponseType(400)]
+        [ProducesResponseType(422)]
         public async Task<ActionResult<OpenIdConnectResponse>> Login([ModelBinder(typeof(OpenIddictMvcBinder))][FromForm] OpenIdConnectRequest request)
         {
+            if (!ModelState.IsValid)
+                return UnprocessableEntity(new CustomValidationProblemDetails(ModelState));
+
             if (request.IsPasswordGrantType())
             {
                 return BadRequest(new OpenIdConnectResponse

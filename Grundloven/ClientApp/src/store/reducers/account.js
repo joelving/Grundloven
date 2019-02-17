@@ -1,4 +1,4 @@
-import { post, postJson, postForm } from '../../helpers/http';
+import { post } from '../../helpers/http';
 import auth from '../../helpers/auth';
 
 export const REQUEST_FAILED = 'account/REQUEST_FAILED';
