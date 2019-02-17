@@ -69,7 +69,7 @@ export const sendVerificationEmail = () => {
             type: SEND_VERIFICATION_EMAIL_REQUESTED
         });
 
-        var response = await post('/api/account/sendverificationemail');
+        var response = await post('/api/account/send-verification-email');
         dispatch({
             type: SEND_VERIFICATION_EMAIL_RECEIVED,
             ...response

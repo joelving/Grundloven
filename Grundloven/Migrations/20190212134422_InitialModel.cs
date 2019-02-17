@@ -177,29 +177,32 @@ namespace Grundloven.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(nullable: false),
-                    Revision = table.Column<int>(nullable: false),
-                    SourceId = table.Column<Guid>(nullable: false),
-                    SourceRevision = table.Column<int>(nullable: false),
+                    SourceId = table.Column<Guid>(nullable: true),
                     Text = table.Column<string>(nullable: true),
                     Created = table.Column<long>(nullable: false),
                     ConstitutionId = table.Column<Guid>(nullable: false),
-                    ArticleId = table.Column<Guid>(nullable: true),
-                    ArticleRevision = table.Column<int>(nullable: true)
+                    ParentId = table.Column<Guid>(nullable: true)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Article", x => new { x.Id, x.Revision });
+                    table.PrimaryKey("PK_Article", x => x.Id);
                     table.ForeignKey(
                         name: "FK_Article_Constitution_ConstitutionId",
                         column: x => x.ConstitutionId,
                         principalTable: "Constitution",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
-                        name: "FK_Article_Article_ArticleId_ArticleRevision",
-                        columns: x => new { x.ArticleId, x.ArticleRevision },
+                        name: "FK_Article_Article_ParentId",
+                        column: x => x.ParentId,
                         principalTable: "Article",
-                        principalColumns: new[] { "Id", "Revision" },
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_Article_Article_SourceId",
+                        column: x => x.SourceId,
+                        principalTable: "Article",
+                        principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
 
@@ -218,13 +221,13 @@ namespace Grundloven.Migrations
                         column: x => x.ConstitutionId,
                         principalTable: "Constitution",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_ConstitutionFollower_AspNetUsers_UserId",
                         column: x => x.UserId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
+                        onDelete: ReferentialAction.Restrict);
                 });
 
             migrationBuilder.CreateTable(
@@ -232,20 +235,26 @@ namespace Grundloven.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(nullable: false),
-                    Revision = table.Column<int>(nullable: false),
+                    SourceId = table.Column<Guid>(nullable: true),
+                    RevisionId = table.Column<Guid>(nullable: true),
+                    ArticleId = table.Column<Guid>(nullable: false),
                     Text = table.Column<string>(nullable: true),
-                    Created = table.Column<long>(nullable: false),
-                    ArticleId = table.Column<Guid>(nullable: true),
-                    ArticleRevision = table.Column<int>(nullable: true)
+                    Created = table.Column<long>(nullable: false)
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_ArticleComment", x => new { x.Id, x.Revision });
+                    table.PrimaryKey("PK_ArticleComment", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_ArticleComment_Article_ArticleId_ArticleRevision",
-                        columns: x => new { x.ArticleId, x.ArticleRevision },
+                        name: "FK_ArticleComment_Article_ArticleId",
+                        column: x => x.ArticleId,
                         principalTable: "Article",
-                        principalColumns: new[] { "Id", "Revision" },
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
+                        name: "FK_ArticleComment_ArticleComment_RevisionId",
+                        column: x => x.RevisionId,
+                        principalTable: "ArticleComment",
+                        principalColumn: "Id",
                         onDelete: ReferentialAction.Restrict);
                 });
 
@@ -256,24 +265,22 @@ namespace Grundloven.Migrations
                     Id = table.Column<Guid>(nullable: false),
                     Created = table.Column<long>(nullable: false),
                     OwnerId = table.Column<Guid>(nullable: false),
-                    ArticleId = table.Column<Guid>(nullable: false),
-                    ArticleId1 = table.Column<Guid>(nullable: true),
-                    ArticleRevision = table.Column<int>(nullable: true)
+                    ArticleId = table.Column<Guid>(nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Like", x => x.Id);
                     table.ForeignKey(
+                        name: "FK_Like_Article_ArticleId",
+                        column: x => x.ArticleId,
+                        principalTable: "Article",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                    table.ForeignKey(
                         name: "FK_Like_AspNetUsers_OwnerId",
                         column: x => x.OwnerId,
                         principalTable: "AspNetUsers",
                         principalColumn: "Id",
-                        onDelete: ReferentialAction.Cascade);
-                    table.ForeignKey(
-                        name: "FK_Like_Article_ArticleId1_ArticleRevision",
-                        columns: x => new { x.ArticleId1, x.ArticleRevision },
-                        principalTable: "Article",
-                        principalColumns: new[] { "Id", "Revision" },
                         onDelete: ReferentialAction.Restrict);
                 });
 
@@ -283,14 +290,26 @@ namespace Grundloven.Migrations
                 column: "ConstitutionId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Article_ArticleId_ArticleRevision",
+                name: "IX_Article_ParentId",
                 table: "Article",
-                columns: new[] { "ArticleId", "ArticleRevision" });
+                column: "ParentId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ArticleComment_ArticleId_ArticleRevision",
+                name: "IX_Article_SourceId",
+                table: "Article",
+                column: "SourceId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ArticleComment_ArticleId",
                 table: "ArticleComment",
-                columns: new[] { "ArticleId", "ArticleRevision" });
+                column: "ArticleId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_ArticleComment_RevisionId",
+                table: "ArticleComment",
+                column: "RevisionId",
+                unique: true,
+                filter: "[RevisionId] IS NOT NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_AspNetRoleClaims_RoleId",
@@ -342,14 +361,14 @@ namespace Grundloven.Migrations
                 column: "UserId");
 
             migrationBuilder.CreateIndex(
+                name: "IX_Like_ArticleId",
+                table: "Like",
+                column: "ArticleId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Like_OwnerId",
                 table: "Like",
                 column: "OwnerId");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Like_ArticleId1_ArticleRevision",
-                table: "Like",
-                columns: new[] { "ArticleId1", "ArticleRevision" });
         }
 
         protected override void Down(MigrationBuilder migrationBuilder)

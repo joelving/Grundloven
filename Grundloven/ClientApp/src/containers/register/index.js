@@ -1,33 +1,38 @@
 import React from 'react';
+import { push } from 'connected-react-router';
 import { bindActionCreators } from 'redux';
 import { connect } from 'react-redux';
 import { Formik, Form } from 'formik';
 import { Link } from 'react-router-dom';
 import { isEmail, isNullOrWhitespace } from '../../helpers/validators';
+import ProblemDetails from '../../components/problem-details';
 import {
-    login
+    register
 } from '../../store/reducers/account';
 
-const validator = (values, errorMessages) => {
+const validator = (values) => {
     let errors = {};
 
     if (!isEmail(values.email))
-        errors.email = errorMessages.email || "Du skal indtaste en emailadresse.";
+        errors.email = "Du skal indtaste en emailadresse.";
 
     if (isNullOrWhitespace(values.password))
-        errors.password = errorMessages.password || "Du skal indtaste et kodeord.";
+        errors.password = "Du skal indtaste et kodeord.";
+
+    if (isNullOrWhitespace(values.confirmPassword))
+        errors.confirmPassword = "Du skal bekræfte dit kodeord.";
+    else if (values.password !== values.confirmPassword)
+        errors.confirmPassword = "Begge kodeord skal være ens.";
         
     return errors;
 };
 
-const Login = props => {
+const Register = props => {
     const renderer = ({ touched, errors, values, handleChange, handleBlur }) => (
         <Form>
             <h1>Login</h1>
 
-            {props.errorMessages.length > 0 && <div className="alert alert-danger">
-                {props.errorMessages.map((e, i) => <div key={i}>{e}</div>)}
-            </div>}
+            <ProblemDetails {...props.problemDetails} />
 
             <div className="form-group">
                 <label htmlFor="email-input" style={touched.email && errors.email ? { color: "red"} : {}}>Email *</label>
@@ -60,21 +65,37 @@ const Login = props => {
                 {touched.password && errors.password && <div className="invalid-feedback">{errors.password}</div>}
             </div>
             
-            <button className="btn btn-primary" type="submit" disabled={props.isLoading}>Login</button>
+            <div className="form-group">
+                <label htmlFor="confirm-password-input" style={touched.confirmPassword && errors.confirmPassword ? { color: "red"} : {}}>Gentag kodeord *</label>
+                <input
+                    id="confirm-password-input"
+                    className="form-control"
+                    onChange={handleChange}
+                    onBlur={handleBlur}
+                    value={values.confirmPassword}
+                    type="password"
+                    name="confirmPassword"
+                    required
+                />
+                {touched.confirmPassword && errors.confirmPassword && <div className="invalid-feedback">{errors.confirmPassword}</div>}
+            </div>
+            
+            <button className="btn btn-primary" type="submit" disabled={props.isLoading}>Opret bruger</button>
 
             <div className="text-center">
-                <Link to="/forgot-password">Glemt kodeord?</Link>
-            </div>
-            <div className="text-center">
-                <Link to="/register">Opret en ny konto</Link>
+                <Link to="/login">Log ind med eksisterende bruger</Link>
             </div>
         </Form>
     );
     return <div className="row">
         <div className="col-12 col-sm-6 offset-sm-3">
-            <Formik initialValues={{ email: "", password: "" }}
+            <Formik initialValues={{ email: "", password: "", confirmPassword: "" }}
                 validate={validator}
-                onSubmit={(values) => props.login(values.email, values.password)}
+                onSubmit={async (values) => {
+                    await props.register(values.email, values.password);
+                    if (props.isLoggedIn)
+                        props.goToFrontPage();
+                }}
                 render={renderer}>
             </Formik>
         </div>
@@ -84,17 +105,20 @@ const Login = props => {
 const mapStateToProps = ({ account, profile }) => ({
     loggedIn: account.loggedIn,
     isLoading: account.isLoading,
-    errorMessages: account.errorMessages,
+    problemDetails: account.problemDetails,
     profile: profile.profile
 });
 
 const mapDispatchToProps = dispatch =>
     bindActionCreators(
-        { login },
+        {
+            register,
+            goToFrontPage: () => push('/')
+        },
         dispatch
     );
 
 export default connect(
     mapStateToProps,
     mapDispatchToProps
-)(Login);
+)(Register);

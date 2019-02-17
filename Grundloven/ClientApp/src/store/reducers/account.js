@@ -1,114 +1,114 @@
-import { post, postJson } from '../../helpers/http';
-import { PROFILE_RECEIVED } from './profile';
+import { post, postJson, postForm } from '../../helpers/http';
+import auth from '../../helpers/auth';
 
+export const REQUEST_FAILED = 'account/REQUEST_FAILED';
 export const REGISTER_REQUESTED = 'account/REGISTER_REQUESTED';
-export const REGISTER_RECEIVED = 'account/REGISTER_RECEIVED';
+export const REGISTER_SUCCEEDED = 'account/REGISTER_SUCCEEDED';
 export const LOGIN_REQUESTED = 'account/LOGIN_REQUESTED';
-export const LOGIN_RECEIVED = 'account/LOGIN_RECEIVED';
+export const LOGIN_SUCCEEDED = 'account/LOGIN_SUCCEEDED';
 export const LOGOUT_REQUESTED = 'account/LOGOUT_REQUESTED';
-export const LOGOUT_RECEIVED = 'account/LOGOUT_RECEIVED';
+export const LOGOUT_SUCCEEDED = 'account/LOGOUT_SUCCEEDED';
 export const CONFIRM_EMAIL_REQUESTED = 'account/CONFIRM_EMAIL_REQUESTED';
-export const CONFIRM_EMAIL_RECEIVED = 'account/CONFIRM_EMAIL_RECEIVED';
+export const CONFIRM_EMAIL_SUCCEEDED = 'account/CONFIRM_EMAIL_SUCCEEDED';
 export const FORGET_PASSWORD_REQUESTED = 'account/FORGET_PASSWORD_REQUESTED';
-export const FORGET_PASSWORD_RECEIVED = 'account/FORGET_PASSWORD_RECEIVED';
+export const FORGET_PASSWORD_SUCCEEDED = 'account/FORGET_PASSWORD_SUCCEEDED';
 export const RESET_PASSWORD_REQUESTED = 'account/RESET_PASSWORD_REQUESTED';
-export const RESET_PASSWORD_RECEIVED = 'account/RESET_PASSWORD_RECEIVED';
+export const RESET_PASSWORD_SUCCEEDED = 'account/RESET_PASSWORD_SUCCEEDED';
 
 const initialState = {
     loggedIn: false,
     isLoading: false,
-    errorMessages: []
+    problemDetails: null
 };
 
 export const reducer = (state = initialState, action) => {
     switch (action.type) {
+        case REQUEST_FAILED:
+            return {
+                ...state,
+                isLoading: false,
+                problemDetails: action.problemDetails
+            };
+
         case REGISTER_REQUESTED:
+            auth.removeToken();
             return {
                 ...state,
                 loggedIn: false,
                 isLoading: true,
-                errorMessages: []
+                problemDetails: null
             };
-
-        case REGISTER_RECEIVED:
+        case REGISTER_SUCCEEDED:
             return {
                 ...state,
-                loggedIn: action.success ? true : state.loggedIn,
-                isLoading: false,
-                errorMessages: action.success ? [] : action.errorMessages
+                isLoading: false
             };
 
         case LOGIN_REQUESTED:
+            auth.removeToken();
             return {
                 ...state,
                 loggedIn: false,
                 isLoading: true,
-                errorMessages: []
+                problemDetails: null
             };
-
-        case LOGIN_RECEIVED:
+        case LOGIN_SUCCEEDED:
+            auth.setToken(action);
             return {
                 ...state,
-                loggedIn: action.success ? true : state.loggedIn,
-                isLoading: false,
-                errorMessages: action.success ? [] : action.errorMessages
+                loggedIn: true,
+                isLoading: false
             };
 
         case LOGOUT_REQUESTED:
             return {
                 ...state,
                 isLoading: true,
-                errorMessages: []
+                problemDetails: null
             };
-
-        case LOGOUT_RECEIVED:
+        case LOGOUT_SUCCEEDED:
+            auth.removeToken();
             return {
                 ...state,
-                loggedIn: action.success ? false : state.loggedIn,
-                isLoading: false,
-                errorMessages: action.success ? [] : action.errorMessages
+                loggedIn: false,
+                isLoading: false
             };
 
         case CONFIRM_EMAIL_REQUESTED:
             return {
                 ...state,
                 isLoading: true,
-                errorMessages: []
+                problemDetails: null
             };
-
-        case CONFIRM_EMAIL_RECEIVED:
+        case CONFIRM_EMAIL_SUCCEEDED:
             return {
                 ...state,
-                isLoading: false,
-                errorMessages: action.success ? [] : action.errorMessages
+                isLoading: false
             };
 
         case FORGET_PASSWORD_REQUESTED:
             return {
                 ...state,
                 isLoading: true,
-                errorMessages: []
+                problemDetails: null
             };
-
-        case FORGET_PASSWORD_RECEIVED:
+        case FORGET_PASSWORD_SUCCEEDED:
             return {
                 ...state,
-                isLoading: false,
-                errorMessages: action.success ? [] : action.errorMessages
+                isLoading: false
             };
 
         case RESET_PASSWORD_REQUESTED:
             return {
                 ...state,
                 isLoading: true,
-                errorMessages: []
+                problemDetails: null
             };
 
-        case RESET_PASSWORD_RECEIVED:
+        case RESET_PASSWORD_SUCCEEDED:
             return {
                 ...state,
-                isLoading: false,
-                errorMessages: action.success ? [] : action.errorMessages
+                isLoading: false
             };
 
         default:
@@ -117,21 +117,23 @@ export const reducer = (state = initialState, action) => {
 };
 
 
-export const register = (username, password) => {
+export const register = (email, password) => {
     return async dispatch => {
         dispatch({
             type: REGISTER_REQUESTED
         });
 
-        var response = await postJson('/api/account/register', { username, password });
-        dispatch({
-            type: REGISTER_RECEIVED,
-            ...response
-        });
-        dispatch({
-            type: PROFILE_RECEIVED,
-            ...response
-        });
+        try {
+            let response = await post('/api/account/register', { email, password });
+            await dispatch({
+                type: REGISTER_SUCCEEDED,
+                ...response
+            });
+            login(email, password);
+        }
+        catch (problemDetails) {
+            dispatch({ type: REQUEST_FAILED, problemDetails });
+        }
     };
 };
 
@@ -141,15 +143,13 @@ export const login = (username, password) => {
             type: LOGIN_REQUESTED
         });
 
-        var response = await postJson('/api/account/login', { username, password });
-        dispatch({
-            type: LOGIN_RECEIVED,
-            ...response
-        });
-        dispatch({
-            type: PROFILE_RECEIVED,
-            ...response
-        });
+        try {
+            let response = await post('/api/account/login', { grant_type: "password", username, password }, false);
+            dispatch({ type: LOGIN_SUCCEEDED, ...response });
+        }
+        catch (problemDetails) {
+            dispatch({ type: REQUEST_FAILED, problemDetails });
+        }
     };
 };
 
@@ -159,11 +159,13 @@ export const logout = () => {
             type: LOGOUT_REQUESTED
         });
 
-        var response = await post('/api/account/logout');
-        dispatch({
-            type: LOGOUT_RECEIVED,
-            ...response
-        });
+        try {
+            let response = await post('/api/account/logout');
+            dispatch({ type: LOGOUT_SUCCEEDED, ...response });
+        }
+        catch (problemDetails) {
+            dispatch({ type: REQUEST_FAILED, problemDetails });
+        }
     };
 };
 
@@ -173,11 +175,13 @@ export const confirmEmail = (code) => {
             type: CONFIRM_EMAIL_REQUESTED
         });
 
-        var response = await postJson('/api/account/confirmemail', { code });
-        dispatch({
-            type: CONFIRM_EMAIL_RECEIVED,
-            ...response
-        });
+        try {
+            var response = await post('/api/account/confirm-email', { code });
+            dispatch({ type: CONFIRM_EMAIL_SUCCEEDED, ...response });
+        }
+        catch (problemDetails) {
+            dispatch({ type: REQUEST_FAILED, problemDetails });
+        }
     };
 };
 
@@ -187,11 +191,13 @@ export const forgotPassword = (email) => {
             type: FORGET_PASSWORD_REQUESTED
         });
 
-        var response = await postJson('/api/account/forgotpassword', { email });
-        dispatch({
-            type: FORGET_PASSWORD_RECEIVED,
-            ...response
-        });
+        try {
+            var response = await post('/api/account/forgot-password', { email });
+            dispatch({ type: FORGET_PASSWORD_SUCCEEDED, ...response });
+        }
+        catch (problemDetails) {
+            dispatch({ type: REQUEST_FAILED, problemDetails });
+        }
     };
 };
 
@@ -201,11 +207,13 @@ export const resetPassword = (email, password, code) => {
             type: RESET_PASSWORD_REQUESTED
         });
 
-        var response = await postJson('/api/account/resetpassword', { email, password, code });
-        dispatch({
-            type: RESET_PASSWORD_RECEIVED,
-            ...response
-        });
+        try {
+            var response = await post('/api/account/reset-password', { email, password, code });
+            dispatch({ type: RESET_PASSWORD_SUCCEEDED, ...response });
+        }
+        catch (problemDetails) {
+            dispatch({ type: REQUEST_FAILED, problemDetails });
+        }
     };
 };
 

@@ -12,7 +12,7 @@ namespace Grundloven.Data
         public ApplicationDbContext CreateDbContext(params string[] args)
         {
             var builder = new DbContextOptionsBuilder<ApplicationDbContext>();
-            builder.UseSqlServer("Server=(localdb)\\mssqllocaldb;Database=aspnet-grundloven-1;Trusted_Connection=True;MultipleActiveResultSets=true");
+            builder.UseSqlServer("Server=(localdb)\\mssqllocaldb;Database=aspnet-grundloven-4;Trusted_Connection=True;MultipleActiveResultSets=true");
             return new ApplicationDbContext(builder.Options);
         }
     }

@@ -15,11 +15,11 @@ namespace Grundloven.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "2.1.4-rtm-31024")
+                .HasAnnotation("ProductVersion", "2.2.1-servicing-10028")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128)
                 .HasAnnotation("SqlServer:ValueGenerationStrategy", SqlServerValueGenerationStrategy.IdentityColumn);
 
-            modelBuilder.Entity("Grundlov.Server.Models.ApplicationUser", b =>
+            modelBuilder.Entity("Grundloven.Models.ApplicationUser", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd();
@@ -70,57 +70,59 @@ namespace Grundloven.Migrations
                     b.ToTable("AspNetUsers");
                 });
 
-            modelBuilder.Entity("Grundlov.Server.Models.Article", b =>
+            modelBuilder.Entity("Grundloven.Models.Article", b =>
                 {
-                    b.Property<Guid>("Id");
-
-                    b.Property<int>("Revision");
-
-                    b.Property<Guid?>("ArticleId");
-
-                    b.Property<int?>("ArticleRevision");
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd();
 
                     b.Property<Guid>("ConstitutionId");
 
                     b.Property<long>("Created");
 
-                    b.Property<Guid>("SourceId");
+                    b.Property<Guid?>("ParentId");
 
-                    b.Property<int>("SourceRevision");
+                    b.Property<Guid?>("SourceId");
 
                     b.Property<string>("Text");
 
-                    b.HasKey("Id", "Revision");
+                    b.HasKey("Id");
 
                     b.HasIndex("ConstitutionId");
 
-                    b.HasIndex("ArticleId", "ArticleRevision");
+                    b.HasIndex("ParentId");
+
+                    b.HasIndex("SourceId");
 
                     b.ToTable("Article");
                 });
 
-            modelBuilder.Entity("Grundlov.Server.Models.ArticleComment", b =>
+            modelBuilder.Entity("Grundloven.Models.ArticleComment", b =>
                 {
-                    b.Property<Guid>("Id");
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd();
 
-                    b.Property<int>("Revision");
-
-                    b.Property<Guid?>("ArticleId");
-
-                    b.Property<int?>("ArticleRevision");
+                    b.Property<Guid>("ArticleId");
 
                     b.Property<long>("Created");
 
+                    b.Property<Guid?>("RevisionId");
+
+                    b.Property<Guid?>("SourceId");
+
                     b.Property<string>("Text");
 
-                    b.HasKey("Id", "Revision");
+                    b.HasKey("Id");
 
-                    b.HasIndex("ArticleId", "ArticleRevision");
+                    b.HasIndex("ArticleId");
+
+                    b.HasIndex("RevisionId")
+                        .IsUnique()
+                        .HasFilter("[RevisionId] IS NOT NULL");
 
                     b.ToTable("ArticleComment");
                 });
 
-            modelBuilder.Entity("Grundlov.Server.Models.Constitution", b =>
+            modelBuilder.Entity("Grundloven.Models.Constitution", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd();
@@ -136,7 +138,7 @@ namespace Grundloven.Migrations
                     b.ToTable("Constitution");
                 });
 
-            modelBuilder.Entity("Grundlov.Server.Models.ConstitutionFollower", b =>
+            modelBuilder.Entity("Grundloven.Models.ConstitutionFollower", b =>
                 {
                     b.Property<Guid>("ConstitutionId");
 
@@ -149,16 +151,12 @@ namespace Grundloven.Migrations
                     b.ToTable("ConstitutionFollower");
                 });
 
-            modelBuilder.Entity("Grundlov.Server.Models.Like", b =>
+            modelBuilder.Entity("Grundloven.Models.Like", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd();
 
                     b.Property<Guid>("ArticleId");
-
-                    b.Property<Guid?>("ArticleId1");
-
-                    b.Property<int?>("ArticleRevision");
 
                     b.Property<long>("Created");
 
@@ -166,9 +164,9 @@ namespace Grundloven.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("OwnerId");
+                    b.HasIndex("ArticleId");
 
-                    b.HasIndex("ArticleId1", "ArticleRevision");
+                    b.HasIndex("OwnerId");
 
                     b.ToTable("Like");
                 });
@@ -280,56 +278,69 @@ namespace Grundloven.Migrations
                     b.ToTable("AspNetUserTokens");
                 });
 
-            modelBuilder.Entity("Grundlov.Server.Models.Article", b =>
+            modelBuilder.Entity("Grundloven.Models.Article", b =>
                 {
-                    b.HasOne("Grundlov.Server.Models.Constitution", "Constitution")
+                    b.HasOne("Grundloven.Models.Constitution", "Constitution")
                         .WithMany("Articles")
                         .HasForeignKey("ConstitutionId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
-                    b.HasOne("Grundlov.Server.Models.Article")
+                    b.HasOne("Grundloven.Models.Article", "Parent")
                         .WithMany("SubSections")
-                        .HasForeignKey("ArticleId", "ArticleRevision");
+                        .HasForeignKey("ParentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Grundloven.Models.Article", "Source")
+                        .WithMany("Revisions")
+                        .HasForeignKey("SourceId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
-            modelBuilder.Entity("Grundlov.Server.Models.ArticleComment", b =>
+            modelBuilder.Entity("Grundloven.Models.ArticleComment", b =>
                 {
-                    b.HasOne("Grundlov.Server.Models.Article")
+                    b.HasOne("Grundloven.Models.Article", "Article")
                         .WithMany("Comments")
-                        .HasForeignKey("ArticleId", "ArticleRevision");
+                        .HasForeignKey("ArticleId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Grundloven.Models.ArticleComment", "Revision")
+                        .WithOne("Source")
+                        .HasForeignKey("Grundloven.Models.ArticleComment", "RevisionId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
-            modelBuilder.Entity("Grundlov.Server.Models.Constitution", b =>
+            modelBuilder.Entity("Grundloven.Models.Constitution", b =>
                 {
-                    b.HasOne("Grundlov.Server.Models.ApplicationUser", "Owner")
+                    b.HasOne("Grundloven.Models.ApplicationUser", "Owner")
                         .WithMany("Constitutions")
                         .HasForeignKey("OwnerId")
                         .OnDelete(DeleteBehavior.Cascade);
                 });
 
-            modelBuilder.Entity("Grundlov.Server.Models.ConstitutionFollower", b =>
+            modelBuilder.Entity("Grundloven.Models.ConstitutionFollower", b =>
                 {
-                    b.HasOne("Grundlov.Server.Models.Constitution", "Constitution")
+                    b.HasOne("Grundloven.Models.Constitution", "Constitution")
                         .WithMany("Followers")
                         .HasForeignKey("ConstitutionId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
 
-                    b.HasOne("Grundlov.Server.Models.ApplicationUser", "User")
+                    b.HasOne("Grundloven.Models.ApplicationUser", "User")
                         .WithMany("Following")
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade);
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
-            modelBuilder.Entity("Grundlov.Server.Models.Like", b =>
+            modelBuilder.Entity("Grundloven.Models.Like", b =>
                 {
-                    b.HasOne("Grundlov.Server.Models.ApplicationUser", "Owner")
+                    b.HasOne("Grundloven.Models.Article", "Article")
+                        .WithMany("Likes")
+                        .HasForeignKey("ArticleId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("Grundloven.Models.ApplicationUser", "Owner")
                         .WithMany("Likes")
                         .HasForeignKey("OwnerId")
-                        .OnDelete(DeleteBehavior.Cascade);
-
-                    b.HasOne("Grundlov.Server.Models.Article", "Article")
-                        .WithMany("Likes")
-                        .HasForeignKey("ArticleId1", "ArticleRevision");
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<System.Guid>", b =>
@@ -342,7 +353,7 @@ namespace Grundloven.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserClaim<System.Guid>", b =>
                 {
-                    b.HasOne("Grundlov.Server.Models.ApplicationUser")
+                    b.HasOne("Grundloven.Models.ApplicationUser")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade);
@@ -350,7 +361,7 @@ namespace Grundloven.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserLogin<System.Guid>", b =>
                 {
-                    b.HasOne("Grundlov.Server.Models.ApplicationUser")
+                    b.HasOne("Grundloven.Models.ApplicationUser")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade);
@@ -363,7 +374,7 @@ namespace Grundloven.Migrations
                         .HasForeignKey("RoleId")
                         .OnDelete(DeleteBehavior.Cascade);
 
-                    b.HasOne("Grundlov.Server.Models.ApplicationUser")
+                    b.HasOne("Grundloven.Models.ApplicationUser")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade);
@@ -371,7 +382,7 @@ namespace Grundloven.Migrations
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityUserToken<System.Guid>", b =>
                 {
-                    b.HasOne("Grundlov.Server.Models.ApplicationUser")
+                    b.HasOne("Grundloven.Models.ApplicationUser")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade);

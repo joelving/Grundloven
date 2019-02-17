@@ -2,12 +2,6 @@ import React from 'react';
 import { push } from 'connected-react-router';
 import { bindActionCreators } from 'redux';
 import { connect } from 'react-redux';
-import {
-    increment,
-    incrementAsync,
-    decrement,
-    decrementAsync
-} from '../../store/reducers/counter';
 
 const Home = props => (
     <div>

@@ -1,32 +1,58 @@
-export async function post(url = ``) {
-    // Default options are marked with *
-    const response = await fetch(url, {
+import auth from './auth';
+
+export async function post(url = ``, data = null, json = true) {
+    let headers = {
+        "Content-Type": json ? "application/json" : "application/x-www-form-urlencoded;charset=UTF-8",
+    };
+    const token = auth.getToken();
+    if (token !== null)
+        headers.Authorization = token.token_type + ' ' + token.access_token;
+
+    let postData = {
         method: "POST",
         mode: "cors",
         cache: "no-cache",
         credentials: "same-origin",
-        headers: {
-            "Content-Type": "application/json",
-        },
+        headers,
         redirect: "follow",
         referrer: "no-referrer"
-    });
-    return await response.json(); // parses response to JSON
-};
+    };
+    
+    if (data !== null) {
+        let body = null;
+        if (json) {
+            body = JSON.stringify(data)
+        }
+        else {
+            body = new URLSearchParams();
+            for (let key in data)
+            body.append(key, data[key]);
+        }
+        postData.body = body;
+    }
 
-export async function postJson(url = ``, data = {}) {
-    // Default options are marked with *
-    const response = await fetch(url, {
-        method: "POST",
-        mode: "cors",
-        cache: "no-cache",
-        credentials: "same-origin",
-        headers: {
-            "Content-Type": "application/json",
-        },
-        redirect: "follow",
-        referrer: "no-referrer",
-        body: JSON.stringify(data)
-    });
-    return await response.json(); // parses response to JSON
-};
+    let response = null;
+    try {
+        response = await fetch(url, postData);
+    }
+    catch (err) {
+        throw {
+            title: "Netværksfejl",
+            detail: "Der opstod et problem med at forbinde til serveren. Prøv igen senere."
+        };
+    }
+    let responseData = null;
+    try {
+        responseData = await response.json();
+    }
+    catch (err) {
+        throw {
+            title: "Serverfejl",
+            detail: "Serveren svarede på en uventet måde. Prøv igen senere."
+        };
+    }
+    if (!response.ok) {
+        throw responseData;
+    }
+    return responseData;
+}
