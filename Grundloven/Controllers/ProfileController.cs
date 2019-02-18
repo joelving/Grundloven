@@ -42,7 +42,7 @@ namespace Grundloven.Controllers
         [ProducesResponseType(200)]
         [ProducesResponseType(401)]
         [ProducesResponseType(422)]
-        public async Task<ActionResult> RequestEmailChange([FromBody]ChangeEmailRequest model)
+        public async Task<ActionResult> RequestEmailChange([FromBody]InitiateEmailChangeRequest model)
         {
             if (!ModelState.IsValid)
                 return UnprocessableEntity(new CustomValidationProblemDetails(ModelState));
@@ -74,9 +74,9 @@ namespace Grundloven.Controllers
             var callbackUrl = Url.Page(
                 "/profile/change-email",
                 pageHandler: null,
-                values: new { userId, code },
+                values: new { email = model.Email, code },
                 protocol: Request.Scheme);
-            var (subject, body) = EmailTemplates.ChangeEmail(user.UserName, callbackUrl);
+            var (subject, body) = EmailTemplates.ChangeEmail(user.UserName, callbackUrl, code);
             await _emailSender.SendEmailAsync(model.Email, subject, body);
 
             return Ok();
@@ -84,17 +84,22 @@ namespace Grundloven.Controllers
 
         [HttpGet("/profile/change-email")]
         [Produces("application/json")]
+        [ProducesResponseType(302)]
+        [ProducesResponseType(401)]
+        [ProducesResponseType(422)]
+        public async Task<ActionResult> ChangeEmail(ChangeEmailRequest model)
+            => await ChangeEmailInternal(model, () => Redirect("/profile/me"));
+
+        [HttpPost("/api/profile/change-email")]
+        [Produces("application/json")]
         [ProducesResponseType(200)]
         [ProducesResponseType(401)]
         [ProducesResponseType(422)]
-        public async Task<ActionResult> ChangeEmail(Guid userId, string email, string code)
+        public async Task<ActionResult> ApiChangeEmail([FromBody]ChangeEmailRequest model)
+            => await ChangeEmailInternal(model, () => Ok());
+
+        private async Task<ActionResult> ChangeEmailInternal(ChangeEmailRequest model, Func<ActionResult> successGenerator)
         {
-            if (userId == default)
-                ModelState.AddModelError(nameof(userId), "Du skal angive et bruger Id.");
-            if (string.IsNullOrWhiteSpace(email))
-                ModelState.AddModelError(nameof(email), "Du skal angive en email.");
-            if (string.IsNullOrWhiteSpace(code))
-                ModelState.AddModelError(nameof(code), "Du skal angive en bekræftelseskode.");
             if (!ModelState.IsValid)
                 return UnprocessableEntity(new CustomValidationProblemDetails(ModelState));
 
@@ -108,22 +113,14 @@ namespace Grundloven.Controllers
                     Detail = "Vi kunne ikke genkende din bruger. Prøv at logge ud og ind igen."
                 });
             }
-            if (user.Id != userId)
-            {
-                return BadRequest(new ProblemDetails
-                {
-                    Title = "Ikke tilladt",
-                    Detail = "Du har forsøgt at ændre emailadressen for en bruger, der ikke er dig. Log ud og dernæst ind igen med den bruger, du forsøger at skifte koden på."
-                });
-            }
 
-            var result = await _userManager.ChangeEmailAsync(user, email, code);
+            var result = await _userManager.ChangeEmailAsync(user, model.Email, model.Code);
             if (!result.Succeeded)
             {
                 return Unauthorized(new IdentityProblemDetails(result.Errors));
             }
 
-            return Redirect("/profile/me");
+            return successGenerator();
         }
 
         [HttpPost("/api/profile/send-verification-email")]

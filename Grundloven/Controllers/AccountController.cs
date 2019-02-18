@@ -210,54 +210,35 @@ namespace Grundloven.Controllers
             return Ok();
         }
 
-        [HttpPost("/account/confirm-email")]
+        [HttpGet("/account/confirm-email")]
+        [ProducesResponseType(302)]
+        [ProducesResponseType(400)]
+        [ProducesResponseType(422)]
+        public async Task<ActionResult> ConfirmEmail(ConfirmEmailRequest model)
+            => await ConfirmEmailInternal(model, () => Redirect("/email-confirmed"));
+
+        [HttpPost("/api/account/confirm-email")]
+        [Produces("application/json")]
         [ProducesResponseType(200)]
         [ProducesResponseType(400)]
         [ProducesResponseType(422)]
-        public async Task<ActionResult> ConfirmEmail(Guid userId, string code)
-        {
-            if (userId == default)
-                ModelState.AddModelError(nameof(userId), "Du skal angive et bruger Id.");
-            if (string.IsNullOrWhiteSpace(code))
-                ModelState.AddModelError(nameof(userId), "Du skal angive en bekræftelseskode.");
+        public async Task<ActionResult> ApiConfirmEmail([FromBody]ConfirmEmailRequest model)
+            => await ConfirmEmailInternal(model, () => Ok());
 
+        private async Task<ActionResult> ConfirmEmailInternal(ConfirmEmailRequest model, Func<ActionResult> successGenerator)
+        {
             if (!ModelState.IsValid)
                 return UnprocessableEntity(new CustomValidationProblemDetails(ModelState));
 
-            var user = await _userManager.FindByIdAsync(userId.ToString());
+            var user = await _userManager.FindByIdAsync(model.UserId.ToString());
             if (user == null)
                 return BadRequest(new ConfirmEmailProblem());
 
-            var result = await _userManager.ConfirmEmailAsync(user, code);
+            var result = await _userManager.ConfirmEmailAsync(user, model.Code);
             if (!result.Succeeded)
                 return BadRequest(new ConfirmEmailProblem());
 
-            return Redirect("/email-confirmed");
-        }
-
-        [HttpPost("/account/change-email")]
-        [ProducesResponseType(200)]
-        [ProducesResponseType(400)]
-        [ProducesResponseType(422)]
-        public async Task<ActionResult> ChangeEmail(Guid userId, string email, string code)
-        {
-            if (userId == default)
-                ModelState.AddModelError(nameof(userId), "Du skal angive et bruger Id.");
-            if (string.IsNullOrWhiteSpace(code))
-                ModelState.AddModelError(nameof(userId), "Du skal angive en bekræftelseskode.");
-
-            if (!ModelState.IsValid)
-                return UnprocessableEntity(new CustomValidationProblemDetails(ModelState));
-
-            var user = await _userManager.FindByIdAsync(userId.ToString());
-            if (user == null)
-                return BadRequest(new ConfirmEmailProblem());
-
-            var result = await _userManager.ChangeEmailAsync(user, email, code);
-            if (!result.Succeeded)
-                return BadRequest(new ConfirmEmailProblem());
-
-            return Redirect("/email-confirmed");
+            return successGenerator();
         }
 
         [HttpPost("/api/account/forgot-password")]

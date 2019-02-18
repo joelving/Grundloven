@@ -34,13 +34,12 @@ namespace Grundloven.Infrastructure
                 "<p>Mange hilsener,<br />Grundlov.nu-teamet</p>"
             );
 
-        public static (string subject, string body) ChangeEmail(string username, string callbackUrl)
+        public static (string subject, string body) ChangeEmail(string username, string callbackUrl, string code)
             => (
-                "Nulstil kodeord - Grundloven",
+                "Skift email - Grundloven",
                 $"<p>Kære {username},</p>" +
-                "<p>Du modtager denne mail, fordi en bruger er forsøgt oprettet med din email på Grundlov.nu, hvor der allerede findes en bruger med din mail tilknyttet.</p>" +
-                "<p>Hvis det ikke var dig, kan du roligt ignorere denne mail - intet ændrer sig.</p>" +
-                $"<p>For at nulstille din kode, skal du gå til <a href=\"{callbackUrl}\" title=\"Nulstil kodeord\">{callbackUrl}</a> og vælge en ny.</p>" +
+                "<p>Du modtager denne mail, fordi du har bedt om at skifte din email på Grundlov.nu.</p>" +
+                $"<p>For at Skifte din kode, skal du indtaste koden <a href=\"{callbackUrl}\" title=\"Skift email\">{code}</a> i formularen på siden. Alternativt kan du klikke på linket her.</p>" +
                 "<p>Mange hilsener,<br />Grundlov.nu-teamet</p>"
             );
     }
