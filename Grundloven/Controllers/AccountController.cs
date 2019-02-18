@@ -13,6 +13,7 @@ using Microsoft.Extensions.Options;
 using OpenIddict.Abstractions;
 using OpenIddict.Mvc.Internal;
 using OpenIddict.Server;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -65,6 +66,15 @@ namespace Grundloven.Controllers
                     // Someone is trying to register with an occupied username. To prevent leaking info,
                     // we'll pretend all is well and send an email to the user in question with a link to
                     // reset in case he legitemately has forgotten.
+                    var resetCode = await _userManager.GeneratePasswordResetTokenAsync(user);
+                    var resetCallbackUrl = Url.Page(
+                        "/account/reset-password",
+                        pageHandler: null,
+                        values: new { resetCode },
+                        protocol: Request.Scheme);
+                    var (resetSubject, resetBody) = EmailTemplates.RegisterExistingEmail(user.UserName, resetCallbackUrl);
+                    await _emailSender.SendEmailAsync(input.Email, resetSubject, resetBody);
+
                     return Created("/api/profile/me", new RegisterResponse());
                 }
                 else
@@ -86,7 +96,7 @@ namespace Grundloven.Controllers
                 protocol: Request.Scheme);
 
             var (subject, body) = EmailTemplates.ConfirmEmail(callbackUrl);
-            //await _emailSender.SendEmailAsync(input.Email, subject, body);
+            await _emailSender.SendEmailAsync(input.Email, subject, body);
             
             return Created("/api/profile/me", new RegisterResponse());
         }
@@ -198,6 +208,56 @@ namespace Grundloven.Controllers
             await _signInManager.SignOutAsync();
             _logger.LogInformation("User logged out.");
             return Ok();
+        }
+
+        [HttpPost("/account/confirm-email")]
+        [ProducesResponseType(200)]
+        [ProducesResponseType(400)]
+        [ProducesResponseType(422)]
+        public async Task<ActionResult> ConfirmEmail(Guid userId, string code)
+        {
+            if (userId == default)
+                ModelState.AddModelError(nameof(userId), "Du skal angive et bruger Id.");
+            if (string.IsNullOrWhiteSpace(code))
+                ModelState.AddModelError(nameof(userId), "Du skal angive en bekræftelseskode.");
+
+            if (!ModelState.IsValid)
+                return UnprocessableEntity(new CustomValidationProblemDetails(ModelState));
+
+            var user = await _userManager.FindByIdAsync(userId.ToString());
+            if (user == null)
+                return BadRequest(new ConfirmEmailProblem());
+
+            var result = await _userManager.ConfirmEmailAsync(user, code);
+            if (!result.Succeeded)
+                return BadRequest(new ConfirmEmailProblem());
+
+            return Redirect("/email-confirmed");
+        }
+
+        [HttpPost("/account/change-email")]
+        [ProducesResponseType(200)]
+        [ProducesResponseType(400)]
+        [ProducesResponseType(422)]
+        public async Task<ActionResult> ChangeEmail(Guid userId, string email, string code)
+        {
+            if (userId == default)
+                ModelState.AddModelError(nameof(userId), "Du skal angive et bruger Id.");
+            if (string.IsNullOrWhiteSpace(code))
+                ModelState.AddModelError(nameof(userId), "Du skal angive en bekræftelseskode.");
+
+            if (!ModelState.IsValid)
+                return UnprocessableEntity(new CustomValidationProblemDetails(ModelState));
+
+            var user = await _userManager.FindByIdAsync(userId.ToString());
+            if (user == null)
+                return BadRequest(new ConfirmEmailProblem());
+
+            var result = await _userManager.ChangeEmailAsync(user, email, code);
+            if (!result.Succeeded)
+                return BadRequest(new ConfirmEmailProblem());
+
+            return Redirect("/email-confirmed");
         }
 
         [HttpPost("/api/account/forgot-password")]

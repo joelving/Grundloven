@@ -45,10 +45,12 @@ namespace Grundloven
 
                 options.UseOpenIddict();
             });
-
+            
             services.AddIdentity<ApplicationUser, IdentityRole<Guid>>()
                 .AddEntityFrameworkStores<ApplicationDbContext>()
                 .AddDefaultTokenProviders()
+                // Add custom descriptions for Identity errors by overriding the describer methods.
+                // This is one way of translating them. You could probably inject the request locale to enable localization.
                 .AddErrorDescriber<CustomIdentityErrorDescriber>(); ;
 
             // Configure Identity to use the same JWT claims as OpenIddict instead
@@ -110,7 +112,6 @@ namespace Grundloven
                 {
                     options.SerializerSettings.NullValueHandling = NullValueHandling.Ignore;
                 })
-                .AddDataAnnotationsLocalization()
                 .SetCompatibilityVersion(CompatibilityVersion.Version_2_2);
 
             // In production, the React files will be served from this directory
@@ -121,12 +122,10 @@ namespace Grundloven
 
             services.AddResponseCompression(options =>
             {
+                // If you're very security conscious, disable this.
                 options.EnableForHttps = true;
                 options.Providers.Add<BrotliCompressionProvider>();
             });
-
-            services.AddLocalization(options => options.ResourcesPath = "Resources");
-
 
             services.AddScoped<IEmailSender, EmailSender>();
         }
@@ -138,17 +137,7 @@ namespace Grundloven
 
             app.UseResponseCompression();
 
-            var supportedCultures = new[] { new CultureInfo("da-DK") };
-
-            app.UseRequestLocalization(new RequestLocalizationOptions
-            {
-                DefaultRequestCulture = new RequestCulture("da-DK"),
-                // Formatting numbers, dates, etc.
-                SupportedCultures = supportedCultures,
-                // UI strings that we have localized.
-                SupportedUICultures = supportedCultures
-            });
-
+            // This is an API project, so we skip exception pages and add @khellang's excellent ProblemDetails library.
             app.UseProblemDetails();
 
             if (!env.IsDevelopment())

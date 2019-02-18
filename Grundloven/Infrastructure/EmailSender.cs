@@ -7,7 +7,8 @@ namespace Grundloven.Infrastructure
     {
         public Task SendEmailAsync(string email, string subject, string htmlMessage)
         {
-            throw new System.NotImplementedException();
+            // TODO: Implement SendGrid or similar.
+            return Task.CompletedTask;
         }
     }
 }
