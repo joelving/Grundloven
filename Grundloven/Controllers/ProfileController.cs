@@ -37,12 +37,12 @@ namespace Grundloven.Controllers
             _emailSender = emailSender;
         }
 
-        [HttpPost("/api/profile/request-email-change")]
+        [HttpPost("/api/profile/initiate-email-change")]
         [Produces("application/json")]
         [ProducesResponseType(200)]
         [ProducesResponseType(401)]
         [ProducesResponseType(422)]
-        public async Task<ActionResult> RequestEmailChange([FromBody]InitiateEmailChangeRequest model)
+        public async Task<ActionResult> InitiateEmailChange([FromBody]InitiateEmailChangeRequest model)
         {
             if (!ModelState.IsValid)
                 return UnprocessableEntity(new CustomValidationProblemDetails(ModelState));

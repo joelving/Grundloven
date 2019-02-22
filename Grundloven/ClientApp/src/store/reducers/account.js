@@ -1,6 +1,7 @@
 import { post } from '../../helpers/http';
 import auth from '../../helpers/auth';
 import { push } from 'connected-react-router';
+import { defaultRequestState, setInitialRequestState, setSucceededRequestState, setFailedRequestState } from '../../helpers/api-request-reducer-helpers';
 
 export const REGISTER_REQUESTED = 'account/REGISTER_REQUESTED';
 export const REGISTER_SUCCEEDED = 'account/REGISTER_SUCCEEDED';
@@ -26,49 +27,14 @@ export const RESET_PASSWORD_REQUESTED = 'account/RESET_PASSWORD_REQUESTED';
 export const RESET_PASSWORD_SUCCEEDED = 'account/RESET_PASSWORD_SUCCEEDED';
 export const RESET_PASSWORD_FAILED = 'account/RESET_PASSWORD_FAILED';
 
-const requestState = {
-    isLoading: false,
-    succeded: false,
-    problemDetails: null
-};
-
 const initialState = {
     loggedIn: auth.getToken() !== null,
-    profile: null,
-    register: Object.assign({}, requestState),
-    login: Object.assign({}, requestState),
-    logout: Object.assign({}, requestState),
-    confirmEmail: Object.assign({}, requestState),
-    forgotPassword: Object.assign({}, requestState),
-    resetPassword: Object.assign({}, requestState)
-};
-
-const setInitialRequestState = (state, key) => {
-    let newState = { ...state };
-    newState[key] = {
-        isLoading: true,
-        succeded: false,
-        problemDetails: null
-    };
-    return newState;
-};
-const setSucceededRequestState = (state, key) => {
-    let newState = { ...state };
-    newState[key] = {
-        isLoading: false,
-        succeded: true,
-        problemDetails: null
-    };
-    return newState;
-};
-const setFailedRequestState = (state, key, action) => {
-    let newState = { ...state };
-    newState[key] = {
-        isLoading: false,
-        succeded: false,
-        problemDetails: action.problemDetails
-    };
-    return newState;
+    register: Object.assign({}, defaultRequestState),
+    login: Object.assign({}, defaultRequestState),
+    logout: Object.assign({}, defaultRequestState),
+    confirmEmail: Object.assign({}, defaultRequestState),
+    forgotPassword: Object.assign({}, defaultRequestState),
+    resetPassword: Object.assign({}, defaultRequestState)
 };
 
 export const reducer = (state = initialState, action) => {
@@ -167,19 +133,19 @@ export const logout = () => {
     };
 };
 
-// export const confirmEmail = (code) => {
-//     return async dispatch => {
-//         dispatch({ type: CONFIRM_EMAIL_REQUESTED });
+export const confirmEmail = (code) => {
+    return async dispatch => {
+        dispatch({ type: CONFIRM_EMAIL_REQUESTED });
 
-//         try {
-//             var response = await post('/api/account/confirm-email', { code });
-//             dispatch({ type: CONFIRM_EMAIL_SUCCEEDED, ...response });
-//         }
-//         catch (problemDetails) {
-//             dispatch({ type: CONFIRM_EMAIL_FAILED, problemDetails });
-//         }
-//     };
-// };
+        try {
+            var response = await post('/api/account/confirm-email', { code });
+            dispatch({ type: CONFIRM_EMAIL_SUCCEEDED, ...response });
+        }
+        catch (problemDetails) {
+            dispatch({ type: CONFIRM_EMAIL_FAILED, problemDetails });
+        }
+    };
+};
 
 export const forgotPassword = (email) => {
     return async dispatch => {
@@ -211,7 +177,7 @@ export const resetPassword = (email, password, code) => {
 
 export default {
     register,
-    //confirmEmail,
+    confirmEmail,
     login,
     logout,
     forgotPassword,

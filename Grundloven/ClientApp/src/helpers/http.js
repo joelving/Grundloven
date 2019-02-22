@@ -26,7 +26,7 @@ export async function post(url = ``, data = null, json = true) {
         else {
             body = new URLSearchParams();
             for (let key in data)
-            body.append(key, data[key]);
+                body.append(key, data[key]);
         }
         postData.body = body;
     }
